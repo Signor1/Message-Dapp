@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ethers } from "ethers";
 import contractABI from "./abi.json";
 import "./App.css";
@@ -7,8 +7,11 @@ function App() {
   const [message, setMessage] = useState(null);
   const [newMessage, setNewMessage] = useState("");
 
+  const [owner, setOwner] = useState(null);
+  const [newOwner, setNewOwner] = useState("");
+
   //address
-  const contractAddress = "0xbb17c0DE13a76eF57e9b00020f712A1740A8cf01";
+  const contractAddress = "0xb23B7Ea28B97887B931e4f5075073221996d02A5";
 
   // async function for accessing metamask in our browser
   async function requestAccount() {
@@ -70,9 +73,54 @@ function App() {
     }
   }
 
-  useEffect(() => {
-    getMessage();
-  }, []);
+  // methods for ownership transfer
+  async function getCurrentOwner() {
+    if (typeof window.ethereum !== "undefined") {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        contractAddress,
+        contractABI,
+        signer
+      );
+
+      try {
+        const currtOwner = await contract.owner();
+        setOwner(currtOwner);
+      } catch (err) {
+        console.error("Error:", err);
+      }
+    } else {
+      await requestAccount();
+    }
+  }
+
+  const handleOwnershipTransfer = async () => {
+    await updateOwner(newOwner);
+
+    setNewOwner("");
+  };
+
+  async function updateOwner(data) {
+    if (typeof window.ethereum !== "undefined") {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        contractAddress,
+        contractABI,
+        signer
+      );
+
+      try {
+        const tx = await contract.transferOwnership(data);
+        tx.wait();
+      } catch (err) {
+        console.error("Error:", err);
+      }
+    } else {
+      await requestAccount();
+    }
+  }
 
   return (
     <div className="App">
@@ -95,6 +143,28 @@ function App() {
           </button>
           <button type="button" onClick={handleSubmit}>
             Set Message
+          </button>
+        </div>
+      </form>
+
+      {/* Ownership Transfer */}
+      <form>
+        <h2>
+          Current Owner:
+          <span>{owner}</span>
+        </h2>
+        <input
+          type="text"
+          value={newOwner}
+          onChange={(e) => setNewOwner(e.target.value)}
+          placeholder="Enter address"
+        />
+        <div className="btns">
+          <button type="button" onClick={getCurrentOwner}>
+            Get Owner
+          </button>
+          <button type="button" onClick={handleOwnershipTransfer}>
+            Transfer Ownership
           </button>
         </div>
       </form>
